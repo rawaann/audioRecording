@@ -1,0 +1,99 @@
+<head>
+    <title>
+        Analysis of Homophones and Homographs
+    </title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <meta name="google-site-verification" content="p6Q3glzYHtIYND_yqhhTDaFdtlxwtvO2mfEPMUbq8h4" />
+</head>
+
+<body> 
+    <div id="test" class="container mt-3">
+    <span><a id="download" style="display: none;"><button type="button" class="btn btn-primary mb-4"> Download</button></a></span>
+    <button style="display: none;" type="button" class="btn btn-danger" id="stop" disabled>Stop</button>
+    <button id="recordAudio" type="button" onclick="recordAudio()" class="btn btn-info" style="display: inline; top:50%; left:45%; position: relative;">Record Audio</button>
+    <iframe id="presentation" src="https://www.realeye.io/test/aa8359b9-7ac0-41bd-b10d-845867e2b88d/run" style="display: none;" width="1300" height="768" allow="camera; fullscreen"></iframe>
+    <!-- <div class="p-5">
+        <video autoplay height='480' width="640" muted></video>
+    </div> -->
+    </div>
+</body>
+
+<script>
+    let shouldStop = false;
+    let stopped = false;
+    const videoElement = document.getElementsByTagName("video")[0];
+    const downloadLink = document.getElementById('download');
+    const stopButton = document.getElementById('stop');
+
+    function startRecord() {
+        $('.btn-info').prop('disabled', true);
+        $('#stop').prop('disabled', false);
+        $('#stop').css('display', 'block')
+        $('#download').css('display', 'none')
+        $('#recordAudio').css('display', 'none')
+        var iframe = document.createElement('iframe');
+        iframe.id = 'presentation2'; // Since the old iframe is called 'presentation'
+        iframe.src = 'https://www.realeye.io/test/aa8359b9-7ac0-41bd-b10d-845867e2b88d/run';
+        iframe.width = Math.max(1366, window.innerWidth); // If the user's window is wider, let's use that instead.
+        iframe.height = Math.max(768, window.innerHeight); // If the user's window is taller, let's use that instead. DOES NOT TAKE THE HEIGHT OF THE STOP BUTTON INTO COSNIDERATION!
+        iframe.allow = 'camera; fullscreen';
+        //$('#test')[0].appendChild(iframe); // If we want to add it to the main div being used (and also use jquery)
+        document.body.appendChild(iframe); // Add it to the main body instead
+    }
+    function stopRecord() {
+        $('.btn-info').prop('disabled', false);
+        $('#stop').prop('disabled', true);
+        $('#download').css('display', 'block')
+    }
+    const audioRecordConstraints = {
+        echoCancellation: true
+    }
+
+    stopButton.addEventListener('click', function () {
+        shouldStop = true;
+    });
+
+    const handleRecord = function ({stream, mimeType}) {
+        startRecord()
+        let recordedChunks = [];
+        stopped = false;
+        const mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = function (e) {
+            if (e.data.size > 0) {
+                recordedChunks.push(e.data);
+            }
+
+            if (shouldStop === true && stopped === false) {
+                mediaRecorder.stop();
+                stopped = true;
+            }
+        };
+           mediaRecorder.onstop = function () {
+            const blob = new Blob(recordedChunks, {
+                type: mimeType
+            });
+            recordedChunks = []
+            const filename = window.prompt('Enter your name');
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = `${filename || 'recording'}.webm`;
+            stopRecord();
+            videoElement.srcObject = null;
+        };
+
+        mediaRecorder.start(200);
+    };
+
+    async function recordAudio() {
+        const mimeType = 'audio/webm';
+        shouldStop = false;
+        const stream = await navigator.mediaDevices.getUserMedia({audio: audioRecordConstraints});
+        handleRecord({stream, mimeType})
+    }
+
+</script>
+
+</html>
